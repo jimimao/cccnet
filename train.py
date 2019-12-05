@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from model.model import CCCNet
 import os
+from tensorboardX import SummaryWriter
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # 标记可用的显卡
 
 
@@ -90,7 +91,14 @@ class train_cccnet():
 
 
 if __name__ == "__main__":
+    # train
     hp = hparam.Hparam(file= './config/config.yaml')
     cccnet = train_cccnet(hp)
     cccnet.train()
-    # print(hp)
+
+    # save the model structure into tensorboard
+    # input = torch.rand(32, 6, 6)
+    # mm = CCCNet(hp)
+    # with SummaryWriter(comment="CCCNet") as W:
+    #     W.add_graph(mm,(input,))
+    # # print(hp)
