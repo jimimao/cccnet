@@ -6,7 +6,7 @@ It can be used though It isn't finished and I'll try my best to complete it tomo
 
 v0.0.1 CCCNet Structure
 
-![CCCNet str](Result/CCCNet Structure.png)
+![image](Result/CCCNet Structure.png)
 
 
 
