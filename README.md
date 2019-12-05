@@ -6,7 +6,7 @@ It can be used though It isn't finished and I'll try my best to complete it tomo
 
 1.Run train.py 
 
-![image](./Result/Screen Shot 2019-12-05 at 22.49.49.png)
+![image](Result/ss.png)
 
  todo list
 
