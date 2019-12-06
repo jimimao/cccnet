@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from model.model import CCCNet
 import os
+import logging
 from tensorboardX import SummaryWriter
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"  # 标记可用的显卡
 
@@ -45,6 +46,17 @@ class train_cccnet():
 
 
     def train(self):
+        writer = SummaryWriter(comment = 'CCCNet')
+        # logging.basicConfig(
+        #     level=logging.INFO,
+        #     format='%(asctime)s - %(levelname)s - %(message)s',
+        #     handlers=[
+        #         logging.FileHandler(os.path.join(log_dir,
+        #                                          '%s-%d.log' % (args.model, time.time()))),
+        #         logging.StreamHandler()
+        #     ]
+        # )
+        # logger = logging.getLogger()
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         hp = self.hp
         epoches = hp.train.epoches
@@ -54,16 +66,18 @@ class train_cccnet():
 
 
         model.to(device)
-        model.train()
+        # model.train()
         criterion = nn.MSELoss().to(device)
+        # criterion = nn.CrossEntropyLoss().to(device)
         optimizer = torch.optim.Adam(model.parameters(),
                                      lr=hp.train.adam)
         stepall = len(train_loader) # 每个epoch ，迭代完一次训练全集 的次数
         for epoch in range(hp.train.epoches):
+            model.train()
+            total_loss = 0
+            total = 0
             for i, dataset in enumerate(train_loader):
-                data, label = dataset
-                data = data.to(device)
-                label = label.to(device)
+                data, label = dataset[0].to(device),dataset[1].to(device)
                 # print(i, data.size(),
                 # label.size())
                 # data : torch.Size([32, 6, 6])  [batch_size * dim * dim]
@@ -73,14 +87,55 @@ class train_cccnet():
                 predict = predict.view(predict.size(0),-1).float()
                 predict.requires_grad = True
                 # print(label.size())
+                # label = label.long()
                 loss = criterion(predict,label)
-                if (i+1) % 100 == 0:
-                    print("epoch: %d, step: %d / %d, loss: %.5f" % (epoch,i+1,stepall,loss))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-                loss = loss.item()
+                total_loss += loss.item() * data.size(0)
+                total += data.size(0)
+                if (i+1) % 100 == 0:
+                    print("epoch: %d, step: %d / %d, total_loss: %.5f" % (epoch,i+1,stepall,total_loss/total))
+                    writer.add_scalar('Train Loss', total_loss/total, epoch*stepall+i+1)
+            if (epoch+1) % hp.train.chkpt == 0:
+                if not os.path.exists(hp.log.chkpt_dir):
+                    os.mkdir(hp.log.chkpt_dir)
+                save_path = os.path.join(hp.log.chkpt_dir,'chkpt_%d.pt'%(epoch))
+                torch.save({
+                    'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict(),
+                    'epoch': epoch,
+                }, save_path)
+                # logger.info('Save model checkpoint at epoch: %d' % epoch)
+                # logger.info('-'*20)
+                print('Save model checkpoint at epoch: %d' % epoch)
+                print('-' * 20)
 
+                # load model
+                # checkpoint = torch.load(PATH)
+                # model.load_state_dict(checkpoint['model_state_dict'])
+                # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                # epoch = checkpoint['epoch']
+                # loss = checkpoint['loss']
+                #
+                # model.eval()
+                # # - or -
+                # model.train()
+                # logger.info('Validate the test dataset')
+                print('Validate the test dataset')
+                model.eval()
+                rightnum = 0
+                numsum = 0
+                for j,y_dataset in enumerate(test_loader):
+                    y_data,y_label = y_dataset[0].to(device),y_dataset[1].to(device)
+                    y_out = model(y_data)
+                    y_predict = torch.max(y_out,1)[1]
+                    y_predict = y_predict.view(y_predict.size(0) ,-1)
+                    rightnum += y_label.eq(y_predict.data).cpu().sum().item()
+                    numsum += y_data.size(0)
+                writer.add_scalar('Test',rightnum / numsum ,epoch)
+                print("test accuracy: %.5f" % (rightnum/ numsum))
+                # logger.info("test accuracy: %.5f" % rightnum/numsum)
 
 
         return 0
