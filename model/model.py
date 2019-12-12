@@ -66,7 +66,7 @@ class CCCNet(nn.Module):  # v0.0.1
         # x : [B, fc1_dim]
         x = self.fc2(x)
         # x : [B, fc2_dim]
-        x = torch.sigmoid(x)
+        # x = torch.sigmoid(x)
         return x
 
 # class CCCNet(nn.Module):  #v 0.0.2

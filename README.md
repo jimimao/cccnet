@@ -4,9 +4,11 @@
 
 ## Result 
 
-Accuracy is always 0.75...., the network structure nee to be improved.....
+V 0.1.1-crossEntropy loss function
 
 
+
+v 0.0.1  Accuracy is always 0.75...., the network structure nee to be improved.....
 
 ## Details
 

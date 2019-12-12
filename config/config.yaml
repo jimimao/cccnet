@@ -13,7 +13,7 @@ train:
   batch_size: 32
   checkpoint_interval: 1000
   num_workers: 2 # 工作的线程数
-  epoches: 1000 # 遍历训练集全集的次数
+  epoches: 20 # 遍历训练集全集的次数
   adam: 0.001
   chkpt: 10 # 做一次chkpt的间隔数
 

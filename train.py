@@ -67,7 +67,8 @@ class train_cccnet():
 
         model.to(device)
         # model.train()
-        criterion = nn.MSELoss().to(device)
+        # criterion = nn.MSELoss().to(device)
+        criterion = nn.CrossEntropyLoss().to(device)
         # criterion = nn.CrossEntropyLoss().to(device)
         optimizer = torch.optim.Adam(model.parameters(),
                                      lr=hp.train.adam)
@@ -76,27 +77,32 @@ class train_cccnet():
             model.train()
             total_loss = 0
             total = 0
+            trainright = 0
             for i, dataset in enumerate(train_loader):
+                optimizer.zero_grad()
                 data, label = dataset[0].to(device),dataset[1].to(device)
                 # print(i, data.size(),
                 # label.size())
                 # data : torch.Size([32, 6, 6])  [batch_size * dim * dim]
                 # label : torch.Size([32, 1]) [batch_size * 1]
                 out = model(data)
-                predict = torch.max(out,1)[1] # 找出每行中值最大的数 ，并返回其列索引
-                predict = predict.view(predict.size(0),-1).float()
-                predict.requires_grad = True
                 # print(label.size())
                 # label = label.long()
-                loss = criterion(predict,label)
-                optimizer.zero_grad()
+                target = label.squeeze(1).long()
+                loss = criterion(out,target)
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item() * data.size(0)
                 total += data.size(0)
+
+                predict = torch.max(out,1)[1] # 找出每行中值最大的数 ，并返回其列索引
+                predict = predict.view(predict.size(0),-1).float()
+                trainright += label.eq(predict).cpu().sum().item()
                 if (i+1) % 100 == 0:
-                    print("epoch: %d, step: %d / %d, total_loss: %.5f" % (epoch,i+1,stepall,total_loss/total))
-                    writer.add_scalar('Train Loss', total_loss/total, epoch*stepall+i+1)
+                    print("epoch: %d, step: %d / %d, total_loss: %.5f,train_acc : %.5f " % (epoch,i+1,stepall,total_loss/total,trainright/total))
+            writer.add_scalar('Train Loss', total_loss/total, epoch)
+            writer.add_scalar('Train Acc', trainright / total, epoch)
+
             if (epoch+1) % hp.train.chkpt == 0:
                 if not os.path.exists(hp.log.chkpt_dir):
                     os.mkdir(hp.log.chkpt_dir)
@@ -130,7 +136,7 @@ class train_cccnet():
                     y_data,y_label = y_dataset[0].to(device),y_dataset[1].to(device)
                     y_out = model(y_data)
                     y_predict = torch.max(y_out,1)[1]
-                    y_predict = y_predict.view(y_predict.size(0) ,-1)
+                    y_predict = y_predict.view(y_predict.size(0) ,-1).float()
                     rightnum += y_label.eq(y_predict.data).cpu().sum().item()
                     numsum += y_data.size(0)
                 writer.add_scalar('Test',rightnum / numsum ,epoch)
